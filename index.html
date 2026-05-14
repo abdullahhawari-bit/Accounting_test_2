@@ -1,0 +1,777 @@
+<!-- 
+  Smart Accounting Standards Portal (IFRS & IPSAS)
+  Software Architecture: Context-Aware Logic Engine + Multi-PDF Batch Processing
+  Design System: Saudi Government Visual Identity (Green/Gold)
+-->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بوابة المعايير المحاسبية (IFRS & IPSAS)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Noto+Sans+Arabic:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --saudi-green: #006C35;
+            --saudi-gold: #D4AF37;
+            --saudi-light-bg: #f8fafc;
+        }
+        body { font-family: 'Noto Sans Arabic', 'Inter', sans-serif; background-color: var(--saudi-light-bg); color: #1e293b; }
+        .bg-saudi-green { background-color: var(--saudi-green); }
+        .text-saudi-green { color: var(--saudi-green); }
+        .border-saudi-green { border-color: var(--saudi-green); }
+        .bg-saudi-gold { background-color: var(--saudi-gold); }
+        .text-saudi-gold { color: var(--saudi-gold); }
+        
+        .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: var(--saudi-green); border-radius: 10px; }
+        
+        .active-card { 
+            background-color: #006C35 !important; 
+            color: white !important;
+            border-right: 6px solid var(--saudi-gold) !important; 
+            box-shadow: 0 4px 15px rgba(0, 108, 53, 0.2);
+        }
+        .active-card .text-slate-500 { color: #cbd5e1 !important; }
+        .active-card .text-slate-800 { color: white !important; }
+        
+        .prose h3 { color: var(--saudi-green); font-weight: 700; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; margin-top: 2rem; margin-bottom: 1rem;}
+        .prose p { line-height: 1.8; margin-bottom: 1rem; color: #475569; }
+        .prose ul { list-style-type: disc; padding-right: 1.5rem; margin-bottom: 1rem; color: #475569; }
+        .prose li { margin-bottom: 0.5rem; }
+        
+        .ai-message-bot { border-right: 4px solid var(--saudi-gold); background: white; }
+        .ai-message-user { background: var(--saudi-green); color: white; border-bottom-left-radius: 0; }
+
+        .ai-glow { box-shadow: 0 0 15px rgba(212, 175, 55, 0.15); border: 1px solid rgba(212, 175, 55, 0.3); }
+
+        @keyframes slideIn { from { transform: translateY(15px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .message-anim { animation: slideIn 0.3s ease forwards; }
+
+        /* Checklist custom styling */
+        .checklist-checkbox {
+            appearance: none;
+            background-color: #fff;
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 1.25em;
+            height: 1.25em;
+            border: 2px solid #cbd5e1;
+            border-radius: 0.35em;
+            display: grid;
+            place-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+        .checklist-checkbox::before {
+            content: "";
+            width: 0.7em;
+            height: 0.7em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white;
+            background-color: transform;
+            transform-origin: bottom left;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+        }
+        .checklist-checkbox:checked { background-color: var(--saudi-green); border-color: var(--saudi-green); }
+        .checklist-checkbox:checked::before { transform: scale(1); }
+
+        /* Table Print Styles */
+        @media print {
+            .no-print { display: none !important; }
+            .print-area { display: block !important; width: 100% !important; background: white !important; padding: 0 !important; overflow: visible !important;}
+            body { background: white !important; overflow: visible !important; }
+            .checklist-checkbox { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; }
+        }
+    </style>
+</head>
+<body class="overflow-hidden text-right">
+    <div id="app" class="h-screen flex flex-col">
+        
+        <!-- Top Navigation -->
+        <header class="bg-saudi-green text-white shadow-xl z-50 shrink-0 no-print">
+            <div class="max-w-[1600px] mx-auto px-6 py-3 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <div class="p-2 bg-white/10 rounded-xl border border-white/20 cursor-pointer" onclick="showWelcomeView()">
+                        <i data-lucide="library" class="w-6 h-6 text-saudi-gold"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold">المنصة الشاملة لتفسير المعايير المحاسبية</h1>
+                        <p class="text-[10px] text-white/70 tracking-widest font-semibold uppercase">IFRS & IPSAS | المملكة العربية السعودية</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="user-id-badge" class="hidden lg:inline-block bg-white/10 px-3 py-1.5 rounded-lg text-[10px] font-mono border border-white/20">جاري الاتصال...</span>
+                    
+                    <button id="main-ai-btn" class="flex items-center gap-2 bg-saudi-gold text-saudi-green px-5 py-2 rounded-xl font-bold text-sm shadow-lg hover:scale-105 transition-all active:scale-95">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i> المستشار المحاسبي الذكي
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar: Standards List -->
+            <aside class="w-80 bg-white border-l border-slate-200 flex flex-col shrink-0 no-print shadow-sm z-40">
+                <div class="p-5 border-b border-slate-100 bg-slate-50/50">
+                    <div class="relative mb-3">
+                        <i data-lucide="search" class="w-4 h-4 absolute right-3 top-3 text-slate-400"></i>
+                        <input type="text" id="doc-search" placeholder="ابحث برقم المعيار أو الاسم..." 
+                               class="w-full pr-10 pl-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-saudi-green text-sm outline-none transition-all shadow-sm">
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="file" id="custom-pdf-upload" accept="application/pdf" class="hidden">
+                        <button id="btn-trigger-upload" class="flex-1 flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-2 rounded-lg text-[10px] font-bold transition-all border border-slate-200">
+                            <i data-lucide="upload-cloud" class="w-3.5 h-3.5 text-saudi-green"></i> تحليل سياسة مفردة (PDF)
+                        </button>
+                    </div>
+                    
+                    <!-- إضافة ميزة البحث الشامل (Global Search) -->
+                    <div class="mt-4 p-3 bg-saudi-green/5 rounded-xl border border-saudi-green/20">
+                        <h4 class="text-[11px] font-bold text-saudi-green mb-2 flex items-center gap-1.5">
+                            <i data-lucide="globe" class="w-3.5 h-3.5"></i> بحث شامل وتفسير للمعايير
+                        </h4>
+                        <div class="flex gap-2">
+                            <input type="text" id="global-search-input" placeholder="مثال: IFRS 15, IPSAS 17..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-saudi-green text-xs outline-none transition-all">
+                            <button id="btn-global-search" class="bg-saudi-green text-white px-3 rounded-lg hover:bg-green-800 transition-all shadow-sm">
+                                <i data-lucide="search" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scroll p-4 space-y-2" id="doc-nav-list">
+                    <!-- Nav items populate here -->
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <main class="flex-1 flex flex-col overflow-hidden relative bg-slate-50">
+                
+                <!-- Welcome Placeholder -->
+                <div id="welcome-view" class="absolute inset-0 flex flex-col items-center justify-center p-12 text-center z-10 bg-slate-50 transition-all duration-300">
+                    <div class="w-28 h-28 bg-white rounded-[2.5rem] shadow-xl flex items-center justify-center mb-8 border border-slate-100">
+                        <i data-lucide="book-open-check" class="w-12 h-12 text-saudi-green"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-slate-900 leading-tight">المرجع الشامل للمعايير المحاسبية</h2>
+                    <p class="text-slate-500 max-w-lg mt-4 leading-relaxed text-lg">المنصة الرسمية لتفسير وتلخيص معايير التقارير المالية الدولية (IFRS) والقطاع العام (IPSAS). استعرض المعايير، أجرِ المقارنات، أو ارفع وثيقتك الخاصة للتحليل.</p>
+                </div>
+
+                <!-- 1. Document Display View -->
+                <div id="doc-view" class="hidden flex-1 flex flex-col h-full overflow-hidden bg-transparent">
+                    <!-- Header Toolbar -->
+                    <div class="px-8 py-5 border-b border-slate-200 bg-white flex justify-between items-center no-print shrink-0 shadow-sm z-10">
+                        <div class="flex items-center gap-4">
+                            <span id="doc-id-badge" class="bg-saudi-green text-white px-3 py-1 rounded-lg text-xs font-bold shadow-sm uppercase tracking-wider"></span>
+                            <div>
+                                <h2 id="doc-title" class="text-xl font-bold text-slate-900 leading-tight"></h2>
+                                <p id="doc-subtitle" class="text-slate-500 text-xs mt-1 font-semibold"></p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <button id="view-official-pdf" class="flex items-center gap-2 bg-slate-100 text-slate-700 border border-slate-200 px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-200 transition-all shadow-sm">
+                                <i data-lucide="file-check-2" class="w-4 h-4 text-saudi-green"></i> عرض المستند
+                            </button>
+                            <button onclick="window.print()" class="flex items-center gap-2 bg-saudi-green text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-green-800 transition-all">
+                                <i data-lucide="printer" class="w-4 h-4 text-saudi-gold"></i> طباعة الوثيقة
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Content Pane -->
+                    <div class="flex-1 overflow-y-auto custom-scroll p-8 print-area">
+                        <div class="max-w-4xl mx-auto space-y-8">
+                            <div class="bg-white rounded-3xl border border-saudi-gold/40 shadow-sm overflow-hidden ai-glow no-print">
+                                <div class="px-6 py-4 bg-saudi-gold/5 border-b border-saudi-gold/20 flex items-center justify-between">
+                                    <h3 class="text-sm font-bold text-saudi-green flex items-center gap-2">
+                                        <i data-lucide="cpu" class="w-4 h-4 text-saudi-gold"></i> أدوات التفسير الذكي (الوعي بالسياق نشط)
+                                    </h3>
+                                    <span class="text-[10px] text-saudi-gold font-bold px-3 py-1 border border-saudi-gold/30 rounded-full bg-white">GEMINI AI</span>
+                                </div>
+                                <div class="p-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+                                    <button class="ai-task-btn flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[11px] font-bold bg-slate-50 border border-slate-200 hover:border-saudi-gold hover:text-saudi-green transition-all text-slate-600 shadow-sm" data-task="تلخيص">
+                                        <i data-lucide="list-checks" class="w-4 h-4"></i> تلخيص وتفسير للمعيار
+                                    </button>
+                                    <button class="ai-task-btn flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[11px] font-bold bg-slate-50 border border-slate-200 hover:border-saudi-gold hover:text-saudi-green transition-all text-slate-600 shadow-sm" data-task="متطلبات">
+                                        <i data-lucide="shield-alert" class="w-4 h-4"></i> متطلبات الإفصاح
+                                    </button>
+                                    <button class="ai-task-btn flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[11px] font-bold bg-slate-50 border border-slate-200 hover:border-saudi-gold hover:text-saudi-green transition-all text-slate-600 shadow-sm" data-task="أثر">
+                                        <i data-lucide="calculator" class="w-4 h-4"></i> الأثر على القوائم
+                                    </button>
+                                    <button class="ai-task-btn flex items-center justify-center gap-2 p-3.5 rounded-2xl text-[11px] font-bold bg-slate-50 border border-slate-200 hover:border-saudi-gold hover:text-saudi-green transition-all text-slate-600 shadow-sm" data-task="مقارنة IPSAS/IFRS">
+                                        <i data-lucide="scale" class="w-4 h-4"></i> مقارنة IFRS vs IPSAS
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm">
+                                <h4 class="text-lg font-bold text-saudi-green mb-4 flex items-center gap-2 border-b border-slate-100 pb-4">
+                                    <i data-lucide="info" class="w-5 h-5"></i> الملخص التنفيذي والتفسير
+                                </h4>
+                                <div id="content-summary" class="text-base text-slate-700 leading-relaxed font-semibold"></div>
+                            </div>
+                            <article class="bg-white p-10 rounded-[2rem] border border-slate-200 shadow-sm relative overflow-hidden">
+                                <div id="content-body" class="prose prose-slate max-w-none"></div>
+                                <div class="mt-16 pt-8 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400 font-bold italic no-print uppercase tracking-widest">
+                                    <span>المملكة العربية السعودية</span>
+                                    <span>بوابة المعايير المحاسبية © 2026</span>
+                                </div>
+                            </article>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+
+        <!-- Assistant Drawer -->
+        <div id="ai-drawer" class="fixed inset-y-0 left-0 w-full md:w-[480px] bg-slate-50 shadow-2xl z-[100] transform translate-x-[-100%] transition-transform duration-500 border-r border-slate-200 flex flex-col no-print">
+            <div class="p-6 bg-saudi-green text-white flex justify-between items-center shrink-0 shadow-md z-10">
+                <div class="flex items-center gap-4">
+                    <div class="p-2.5 bg-saudi-gold rounded-xl shadow-inner border border-white/10"><i data-lucide="sparkles" class="w-5 h-5 text-saudi-green"></i></div>
+                    <div>
+                        <h3 class="font-bold text-base">المستشار المحاسبي (IFRS/IPSAS)</h3>
+                        <p id="ai-context-label" class="text-[10px] text-white/70 font-semibold mt-0.5">جاهز للتفسير والتحليل</p>
+                    </div>
+                </div>
+                <button id="close-ai" class="p-2 hover:bg-white/10 rounded-xl transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div id="chat-messages" class="flex-1 overflow-y-auto custom-scroll p-6 space-y-5 bg-slate-50">
+                <div class="ai-message-bot p-5 rounded-2xl shadow-sm text-sm text-slate-700 leading-relaxed border border-slate-100">
+                    <div class="font-bold text-[10px] text-saudi-gold mb-2 tracking-wider">نظام الذكاء الاصطناعي</div>
+                    أهلاً بك. أنا المستشار الذكي الخبير بتفسير معايير التقارير المالية الدولية (IFRS) ومعايير القطاع العام (IPSAS). يمكنك اختياري معيار للتفسير، أو طرح أسئلة مقارنة وحالات دراسية.
+                </div>
+            </div>
+
+            <div class="p-5 border-t border-slate-200 bg-white shrink-0">
+                <div class="flex gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200 focus-within:ring-2 focus-within:ring-saudi-green/50 transition-all">
+                    <input type="text" id="ai-input" placeholder="اسأل عن أي معيار، أثر، أو مقارنة..." class="flex-1 bg-transparent px-4 py-2 focus:outline-none text-sm text-right text-slate-700">
+                    <button id="send-ai" class="bg-saudi-green text-white p-3 rounded-xl hover:bg-green-800 transition-all shadow-sm active:scale-95">
+                        <i data-lucide="send" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF Official Modal -->
+        <div id="pdf-modal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-sm z-[200] hidden flex flex-col p-4 md:p-8 no-print transition-opacity">
+            <div class="max-w-[1200px] mx-auto w-full h-full bg-white rounded-2xl overflow-hidden flex flex-col shadow-2xl border border-slate-700">
+                <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
+                    <h3 class="font-bold text-saudi-green flex items-center gap-2 text-sm md:text-base">
+                        <i data-lucide="file-check-2" class="w-5 h-5 text-saudi-gold"></i> المستند: <span id="pdf-modal-title" class="text-slate-800"></span>
+                    </h3>
+                    <button id="close-pdf" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all shadow-sm">
+                        <i data-lucide="x" class="w-4 h-4"></i> إغلاق المستند
+                    </button>
+                </div>
+                <div class="flex-1 bg-slate-200 relative w-full h-full overflow-hidden" id="pdf-container"></div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl text-xs font-bold opacity-0 transition-all pointer-events-none z-[1000]"></div>
+
+    </div>
+
+    <!-- Firebase & Logic Modules -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // مفتاح الذكاء الاصطناعي (ضع مفتاحك الخاص هنا بين علامتي التنصيص قبل الرفع)
+        const apiKey = "";
+
+        // دالة لاكتشاف المحرك المتاح للمفتاح تلقائياً (Auto-Discovery)
+        let cachedModelName = null;
+
+        async function getAvailableModel(key) {
+            if (cachedModelName) return cachedModelName;
+            
+            if (!key || key.trim() === "") {
+                return "gemini-2.5-flash-preview-09-2025"; // Fallback لبيئة الاختبار
+            }
+
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                if (!res.ok) throw new Error("Failed to fetch models list");
+                
+                const data = await res.json();
+                const availableModels = data.models.map(m => m.name);
+                
+                // الأولويات في اختيار النماذج التي تدعم رفع الملفات
+                const priorities = [
+                    "models/gemini-1.5-flash-latest",
+                    "models/gemini-1.5-pro",
+                    "models/gemini-1.5-flash",
+                    "models/gemini-pro"
+                ];
+
+                for (const p of priorities) {
+                    if (availableModels.includes(p)) {
+                        cachedModelName = p.replace("models/", "");
+                        showToast(`تم الاتصال بنجاح بمحرك: ${cachedModelName}`);
+                        return cachedModelName;
+                    }
+                }
+                
+                // خيار بديل أخير
+                const fallback = availableModels.find(m => m.includes("gemini"));
+                if (fallback) {
+                    cachedModelName = fallback.replace("models/", "");
+                    showToast(`تم الاتصال بمحرك بديل: ${cachedModelName}`);
+                    return cachedModelName;
+                }
+                
+                throw new Error("لم يتم العثور على نماذج متوافقة.");
+            } catch (e) {
+                console.error("Auto-discovery error:", e);
+                // الرجوع للنموذج الافتراضي في حال فشل الاستعلام
+                cachedModelName = "gemini-1.5-flash";
+                return cachedModelName;
+            }
+        }
+
+        let useFirebase = false;
+        let auth = null;
+
+        // اكتشاف بيئة التشغيل وتجنب الأعطال في المنصات الخارجية مثل Hugging Face
+        if (typeof __firebase_config !== 'undefined') {
+            try { 
+                const firebaseConfig = JSON.parse(__firebase_config); 
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                useFirebase = true;
+            } 
+            catch (e) { console.error("Config parse error", e); }
+        }
+
+        const STANDARDS_DB = [
+            {
+                id: 'ifrs15',
+                cat: 'IFRS 15',
+                title: 'الإيرادات من العقود مع العملاء',
+                subtitle: 'تحديد وتوقيت الاعتراف بالإيراد للقطاع الخاص',
+                filePath: '', 
+                summary: 'يضع هذا المعيار إطاراً شاملاً لتحديد متى وبأي مبلغ يتم الاعتراف بالإيرادات. يعتمد على مبدأ أساسي وهو أن المنشأة يجب أن تعترف بالإيراد ليعكس نقل السلع أو الخدمات الموعود بها للعملاء بمبلغ يعكس العوض الذي تتوقع المنشأة أن يكون لها الحق فيه.',
+                technical: `<h3>نموذج الخطوات الخمس للاعتراف بالإيراد:</h3>
+                            <ol>
+                                <li>تحديد العقد مع العميل.</li>
+                                <li>تحديد التزامات الأداء المنفصلة.</li>
+                                <li>تحديد سعر المعاملة.</li>
+                                <li>تخصيص سعر المعاملة على التزامات الأداء.</li>
+                                <li>الاعتراف بالإيراد عند الوفاء بالتزام الأداء.</li>
+                            </ol>`,
+                regulatory: 'يحل محل معايير الإيرادات السابقة (IAS 18 و IAS 11) ويتطلب إفصاحات أوسع بكثير حول طبيعة ومبلغ وتوقيت الإيرادات والتدفقات النقدية.',
+                impact: 'يؤثر جوهرياً على توقيت الاعتراف بالإيرادات للشركات التي تقدم خدمات معقدة أو بضائع مدمجة بضمانات وخدمات ما بعد البيع.'
+            },
+            {
+                id: 'ifrs16',
+                cat: 'IFRS 16',
+                title: 'عقود الإيجار',
+                subtitle: 'معالجة الإيجارات التشغيلية والتمويلية',
+                filePath: '', 
+                summary: 'يلغي هذا المعيار التمييز بين الإيجار التشغيلي والتمويلي للمستأجرين، ويتطلب إثبات أصل (حق استخدام) والتزام إيجار لجميع العقود التي تزيد مدتها عن 12 شهراً.',
+                technical: `<h3>المعالجة المحاسبية للمستأجر:</h3>
+                            <ul>
+                                <li><strong>أصل حق الاستخدام:</strong> يقاس مبدئياً بمبلغ الالتزام بالإضافة للدفوعات الأولية.</li>
+                                <li><strong>التزام الإيجار:</strong> القيمة الحالية لدفعات الإيجار المستقبلية.</li>
+                                <li><strong>الأثر على الدخل:</strong> يتم إثبات مصروف إهلاك للأصل، ومصروف فائدة للالتزام بدلاً من مصروف إيجار ثابت.</li>
+                            </ul>`,
+                regulatory: 'يجب على الشركات مراجعة كافة العقود الخدمية لتحديد ما إذا كانت تحتوي على مكون إيجار ضمني.',
+                impact: 'يضخم حجم الأصول والالتزامات في قائمة المركز المالي، ويحسن مقياس الـ EBITDA للشركات بشكل ملحوظ.'
+            },
+            {
+                id: 'ipsas1',
+                cat: 'IPSAS 1',
+                title: 'عرض القوائم المالية (حكومي)',
+                subtitle: 'عرض القوائم المالية للجهات الحكومية',
+                filePath: '', 
+                summary: 'يحدد المتطلبات العامة لعرض القوائم المالية ذات الغرض العام للقطاع العام، لضمان قابليتها للمقارنة سواء مع القوائم المالية للجهة عن فترات سابقة أو مع قوائم جهات أخرى.',
+                technical: `<h3>المكونات الأساسية للقوائم المالية الحكومية</h3>
+                            <ul>
+                                <li>قائمة المركز المالي.</li>
+                                <li>قائمة الأداء المالي (الفائض/العجز).</li>
+                                <li>قائمة التدفقات النقدية.</li>
+                                <li>مقارنة المبالغ الفعلية بالموازنة.</li>
+                            </ul>`,
+                regulatory: 'يجب الإفصاح صراحة وبدون تحفظ عن الالتزام بمعايير IPSAS في الإيضاحات المتممة.',
+                impact: 'ينقل التقارير الحكومية من الأساس النقدي إلى أساس الاستحقاق، مما يظهر الالتزامات المستقبلية والأصول غير الملموسة.'
+            },
+            {
+                id: 'ipsas17',
+                cat: 'IPSAS 17',
+                title: 'الممتلكات والآلات والمعدات',
+                subtitle: 'تقييم الأصول الثابتة للقطاع العام',
+                filePath: '', 
+                summary: 'يوضح المعالجة المحاسبية للممتلكات والآلات والمعدات بحيث يمكن لمستخدمي القوائم المالية معرفة معلومات عن استثمارات الجهة في أصولها الملموسة والتغيرات فيها.',
+                technical: `<h3>قياس الأصول ذات الطبيعة الخاصة (التراثية والبنى التحتية):</h3>
+                            <ul>
+                                <li><strong>الأصول التراثية:</strong> لا يتطلب المعيار بالضرورة إثباتها، ولكن يشجع على ذلك إن أمكن قياسها.</li>
+                                <li><strong>أصول البنية التحتية:</strong> مثل شبكات الطرق والمياه، يجب إثباتها وإهلاكها.</li>
+                            </ul>`,
+                regulatory: 'يُسمح باستخدام نموذج التكلفة أو نموذج إعادة التقييم بعد الاعتراف الأولي.',
+                impact: 'يتطلب من الحكومات حصر وتقييم أصولها الهائلة (أراضي، مباني، طرق) مما يعكس القيمة الحقيقية لثروة الدولة.'
+            }
+        ];
+
+        let activeDoc = null;
+        let currentUser = null;
+
+        // --- Core Functions ---
+
+        async function init() {
+            const badge = document.getElementById('user-id-badge');
+            
+            // التعامل الذكي مع بيئات الاستضافة المختلفة
+            if (useFirebase && auth) {
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        currentUser = user;
+                        if(badge) badge.innerText = `المعرف: ${user.uid.substring(0,6)}`;
+                    }
+                });
+                try { 
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth); 
+                    }
+                } catch (e) { 
+                    console.error("Auth Error", e);
+                    if(badge) badge.innerText = "النظام جاهز";
+                }
+            } else {
+                // تجاوز عملية المصادقة فوراً إذا لم تكن هناك إعدادات (كما في Hugging Face)
+                if(badge) badge.innerText = "النظام جاهز";
+            }
+            
+            lucide.createIcons();
+            renderSidebar();
+            
+            document.getElementById('doc-search').oninput = (e) => renderSidebar(e.target.value);
+            document.getElementById('main-ai-btn').onclick = () => document.getElementById('ai-drawer').style.transform = 'translateX(0)';
+            document.getElementById('close-ai').onclick = () => document.getElementById('ai-drawer').style.transform = 'translateX(-100%)';
+            document.getElementById('view-official-pdf').onclick = openPDFModal;
+            document.getElementById('close-pdf').onclick = () => {
+                document.getElementById('pdf-modal').classList.add('hidden');
+                document.getElementById('pdf-modal').classList.remove('opacity-100');
+            };
+            
+            document.getElementById('btn-trigger-upload').onclick = () => document.getElementById('custom-pdf-upload').click();
+            document.getElementById('custom-pdf-upload').onchange = handleSinglePDFUpload;
+
+            document.getElementById('btn-global-search').onclick = () => {
+                const query = document.getElementById('global-search-input').value;
+                if(query.trim()) {
+                    document.getElementById('ai-drawer').style.transform = 'translateX(0)';
+                    handleUserChat(`أريد معرفة وتفسير المعيار المحاسبي (سواء IFRS أو IPSAS) والإجراءات المتعلقة بـ: ${query}`, 'بحث وتفسير عالمي');
+                    document.getElementById('global-search-input').value = '';
+                }
+            };
+            
+            document.getElementById('send-ai').onclick = () => {
+                const input = document.getElementById('ai-input');
+                if(input && input.value) { handleUserChat(input.value, 'سؤال وتفسير'); input.value = ''; }
+            };
+            document.addEventListener('click', (e) => {
+                const aiBtn = e.target.closest('.ai-task-btn');
+                if (aiBtn) {
+                    const task = aiBtn.getAttribute('data-task');
+                    document.getElementById('ai-drawer').style.transform = 'translateX(0)';
+                    handleUserChat(`أريد ${task} هذا المستند بناءً على الضوابط.`, task);
+                }
+            });
+            
+            window.showWelcomeView = () => {
+                document.getElementById('doc-view').classList.add('hidden');
+                document.getElementById('welcome-view').classList.remove('hidden');
+                activeDoc = null;
+                renderSidebar();
+            };
+        }
+
+        function renderSidebar(query = "") {
+            const list = document.getElementById('doc-nav-list');
+            list.innerHTML = "";
+            const filtered = STANDARDS_DB.filter(d => d.title.includes(query) || d.id.includes(query) || d.cat.includes(query));
+            
+            filtered.forEach(d => {
+                const isActive = activeDoc?.id === d.id;
+                const item = document.createElement('div');
+                item.className = `doc-card p-4 rounded-xl border cursor-pointer transition-all ${isActive ? 'active-card' : 'bg-white border-slate-100 hover:border-saudi-green/30'}`;
+                item.onclick = () => {
+                    selectDoc(d.id);
+                };
+                
+                const badgeColor = d.cat.includes('IFRS') ? 'bg-blue-100 text-blue-600' : 'bg-saudi-green/10 text-saudi-green';
+
+                item.innerHTML = `
+                    <div class="flex justify-between items-center mb-1.5">
+                        <span class="text-[9px] font-bold px-2 py-0.5 rounded ${badgeColor} uppercase tracking-wider">${d.cat}</span>
+                    </div>
+                    <div class="font-bold text-sm truncate text-slate-800 leading-tight">${d.title}</div>
+                    <div class="text-[10px] text-slate-500 truncate mt-1">${d.subtitle}</div>
+                `;
+                list.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function selectDoc(id) {
+            activeDoc = STANDARDS_DB.find(s => s.id === id);
+            
+            document.getElementById('welcome-view').classList.add('hidden');
+            document.getElementById('doc-view').classList.remove('hidden');
+            
+            document.getElementById('doc-title').innerText = activeDoc.title;
+            document.getElementById('doc-subtitle').innerText = activeDoc.subtitle;
+            document.getElementById('doc-id-badge').innerText = activeDoc.cat;
+            
+            document.getElementById('content-summary').innerHTML = activeDoc.summary;
+            document.getElementById('content-body').innerHTML = `
+                ${activeDoc.technical}
+                <h3>متطلبات الإفصاح والامتثال</h3>
+                <p>${activeDoc.regulatory}</p>
+                <h3>الأثر المحاسبي</h3>
+                <p>${activeDoc.impact}</p>
+            `;
+            
+            document.getElementById('ai-context-label').innerText = `مرتبط بـ: ${activeDoc.title}`;
+            renderSidebar(document.getElementById('doc-search').value);
+            lucide.createIcons();
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.opacity = '1';
+            toast.style.pointerEvents = 'auto';
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.pointerEvents = 'none'; }, 4000);
+        }
+
+        async function getBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result.split(',')[1]);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function fetchWithRetry(url, options, retries = 5) {
+            const delays = [1000, 2000, 4000, 8000, 16000];
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error?.message || `HTTP error! status: ${response.status}`);
+                    }
+                    return await response.json();
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(res => setTimeout(res, delays[i]));
+                }
+            }
+        }
+
+        async function handleSinglePDFUpload(e) {
+            // التحقق من وجود مفتاح API قبل الاستمرار
+            if (apiKey.trim() === "") {
+                alert("يرجى إضافة مفتاح واجهة برمجة التطبيقات (API Key) في الكود قبل رفع الملفات.");
+                showToast("خطأ: مفتاح API مفقود");
+                e.target.value = '';
+                return;
+            }
+
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const blobUrl = URL.createObjectURL(file);
+            const base64Data = await getBase64(file);
+
+            const customId = 'custom-' + Date.now();
+            const newStandard = {
+                id: customId, cat: 'مستند محاسبي', title: file.name.replace('.pdf', ''), subtitle: 'تم التفسير آلياً', filePath: blobUrl,
+                summary: '<div class="animate-pulse bg-slate-200 h-4 w-3/4 rounded mb-2"></div>',
+                technical: '<div class="animate-pulse bg-slate-200 h-4 w-1/2 rounded"></div>',
+                regulatory: 'جاري استخراج المتطلبات...', impact: 'جاري التحليل والتفسير...', fullContent: 'مستند مخصص.', base64: base64Data
+            };
+            
+            STANDARDS_DB.unshift(newStandard);
+            selectDoc(customId);
+            
+            showToast("جاري رفع وتحليل السياسة...");
+            
+            try {
+                const analysisData = await extractDataFromPDF(base64Data, file.name);
+                newStandard.summary = analysisData.summary || "تمت القراءة والتفسير بنجاح.";
+                newStandard.technical = analysisData.technical || "المحتوى الفني مستخرج.";
+                newStandard.regulatory = analysisData.regulatory || "متطلبات مستخرجة.";
+                newStandard.impact = analysisData.impact || "تم استخراج الأثر.";
+                if (activeDoc.id === customId) selectDoc(customId);
+                showToast("تم الانتهاء من التفسير والتحليل بنجاح!");
+            } catch (err) {
+                console.error("Upload error: ", err);
+                showToast("حدث خطأ أثناء معالجة المستند.");
+                newStandard.summary = "ملاحظة: فشل التحليل إما بسبب استجابة المحرك أو بنية الملف.";
+                newStandard.technical = `<div class="p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg text-xs leading-relaxed"><strong>تفاصيل الخطأ:</strong><br>${err.message}</div>`;
+                newStandard.regulatory = "غير متاح.";
+                newStandard.impact = "لا تتوفر بيانات.";
+                
+                if (activeDoc.id === customId) selectDoc(customId);
+            }
+            e.target.value = '';
+        }
+
+        async function extractDataFromPDF(base64Data, fileName) {
+            // استخدام دالة الاكتشاف التلقائي للنموذج المتاح
+            const modelName = await getAvailableModel(apiKey);
+            
+            // استخدام المسار المباشر لـ v1beta الذي يدعم Structured Output
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            
+            const prompt = `أنت خبير مالي ومحاسبي (IFRS & IPSAS). اقرأ المستند المرفق واستخرج البيانات المطلوبة بدقة.`;
+            
+            const payload = {
+                contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "application/pdf", data: base64Data } }] }],
+                generationConfig: { 
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            summary: { type: "STRING", description: "ملخص تنفيذي وتفسير عام للمستند" },
+                            technical: { type: "STRING", description: "الشرح الفني لكيفية المعالجة كـ HTML بسيط (استخدم علامات تنصيص مفردة ' داخل الـ HTML)" },
+                            regulatory: { type: "STRING", description: "متطلبات الإفصاح والامتثال المستخرجة" },
+                            impact: { type: "STRING", description: "الأثر المحاسبي والمالي المترتب" }
+                        },
+                        required: ["summary", "technical", "regulatory", "impact"]
+                    }
+                }
+            };
+            
+            const data = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            
+            let textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!textResponse) throw new Error("لم يتم إرجاع أي استجابة من الخادم.");
+            
+            // التحويل المباشر للـ JSON بدون Regex نظراً لاعتمادنا على responseMimeType
+            return JSON.parse(textResponse);
+        }
+
+        function openPDFModal() {
+            if (!activeDoc) return;
+            const modal = document.getElementById('pdf-modal');
+            const container = document.getElementById('pdf-container');
+            document.getElementById('pdf-modal-title').innerText = activeDoc.title;
+            
+            if (activeDoc.filePath && activeDoc.filePath.trim() !== "" && activeDoc.filePath !== "#") {
+                container.innerHTML = `<iframe src="${activeDoc.filePath}" class="w-full h-full border-0 rounded-b-2xl"></iframe>`;
+            } else {
+                container.innerHTML = `
+                    <div class="w-full h-full flex flex-col items-center justify-center bg-slate-50 p-8 text-center rounded-b-2xl">
+                        <i data-lucide="file-warning" class="w-10 h-10 text-saudi-gold mb-4"></i>
+                        <h3 class="text-xl font-bold text-slate-800">المستند غير متوفر</h3>
+                        <p class="text-slate-500 mt-2">عفواً، ملف الـ PDF الخاص بـ (${activeDoc.title}) غير متاح حالياً.</p>
+                    </div>
+                `;
+            }
+            modal.classList.remove('hidden');
+            setTimeout(() => modal.classList.add('opacity-100'), 10);
+            lucide.createIcons();
+        }
+
+        async function callGemini(query, taskType) {
+            // استخدام دالة الاكتشاف التلقائي للنموذج المتاح
+            const modelName = await getAvailableModel(apiKey);
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            
+            let advancedSystemPrompt = "";
+            let parts = [{ text: query }];
+
+            if (taskType === 'بحث وتفسير عالمي') {
+                advancedSystemPrompt = `أنت مستشار مالي محترف وخبير في معايير التقارير المالية الدولية (IFRS) ومعايير المحاسبة في القطاع العام (IPSAS).
+المهمة: المستخدم يبحث عن تفسير لموضوع محاسبي عام أو استفسار شامل.
+التعليمات:
+1. فسر الموضوع المحاسبي ووضح المعيار المرجعي له (اذكر رقم المعيار في IFRS وكذلك مقابله في IPSAS إن وجد).
+2. قدم ملخصاً لتفسير المعالجة المحاسبية (الاعتراف، القياس، الإفصاح).
+3. استخدم لغة مهنية استشارية، ومباشرة.
+ملاحظة: اعتمد على قاعدة معرفتك الشاملة بمعايير IFRS و IPSAS.`;
+            } else if (taskType === 'مقارنة IPSAS/IFRS') {
+                const standardTitle = activeDoc ? activeDoc.title + (activeDoc.cat ? ' (' + activeDoc.cat + ')' : '') : "المستند المحدد";
+                advancedSystemPrompt = `أنت خبير مالي استشاري متخصص في المقارنة بين معايير القطاع العام (IPSAS) والقطاع الخاص (IFRS).
+المهمة: إجراء مقارنة مهنية دقيقة للمستند المفتوح حالياً (${standardTitle}) بين الإطارين المحاسبيين.
+التعليمات:
+1. حلل المستند أو السياق واكتشف هويته (هل يميل لكونه IFRS أم IPSAS).
+2. اذكر بوضوح رقم واسم المعيار في كلا الإطارين (IFRS مقابل IPSAS) لنفس الموضوع.
+3. وضح التشابهات والاختلافات الجوهرية (وخصوصاً المتعلقة بطبيعة الجهات الهادفة للربح مقابل غير الهادفة للربح).
+4. استخدم لغة مهنية ومباشرة (يفضل استخدام النقاط).`;
+
+                if (activeDoc && activeDoc.base64) {
+                    parts.push({ inlineData: { mimeType: "application/pdf", data: activeDoc.base64 } });
+                } else if (activeDoc) {
+                    parts.push({ text: `السياق الحالي للمستند المفتوح:\n\nالملخص: ${activeDoc.summary}\nالتفاصيل: ${activeDoc.technical}` });
+                }
+            } else {
+                const standardTitle = activeDoc ? activeDoc.title : "مساعدة عامة";
+                advancedSystemPrompt = `أنت مستشار ذكي لتفسير المعايير المحاسبية (IFRS & IPSAS).
+الضوابط: التزم بالنص المرفق إذا وجد. المعيار/المستند الحالي: ${standardTitle}. الطلب: ${taskType}`;
+
+                if (activeDoc && activeDoc.base64) {
+                    parts.push({ inlineData: { mimeType: "application/pdf", data: activeDoc.base64 } });
+                } else if (activeDoc) {
+                    parts.push({ text: `السياق الحالي للمستند:\n\nالملخص: ${activeDoc.summary}\nالتفاصيل: ${activeDoc.technical}` });
+                }
+            }
+
+            const payload = { contents: [{ parts: parts }], systemInstruction: { parts: [{ text: advancedSystemPrompt }] } };
+            
+            try {
+                const data = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "عذراً، لم أتمكن من استخراج النتيجة.";
+            } catch (err) { 
+                return "حدث خطأ في الاتصال بمحرك الذكاء الاصطناعي. يرجى المحاولة مرة أخرى. " + err.message; 
+            }
+        }
+
+        async function handleUserChat(text, taskType) {
+            // التحقق من وجود مفتاح API قبل الدردشة مع الذكاء الاصطناعي
+            if (apiKey.trim() === "") {
+                alert("يرجى إضافة مفتاح واجهة برمجة التطبيقات (API Key) في الكود لتفعيل المحادثة.");
+                return;
+            }
+
+            const chat = document.getElementById('chat-messages');
+            chat.innerHTML += `<div class="flex justify-end message-anim"><div class="ai-message-user p-3.5 rounded-2xl shadow-sm text-xs max-w-[85%]">${text}</div></div>`;
+            chat.scrollTop = chat.scrollHeight;
+
+            const loaderId = "L-" + Date.now();
+            chat.innerHTML += `<div id="${loaderId}" class="flex gap-3 message-anim"><div class="bg-slate-200 px-5 py-3 rounded-2xl text-[10px] text-slate-500 font-bold animate-pulse">جاري التحليل...</div></div>`;
+            chat.scrollTop = chat.scrollHeight;
+
+            const replyText = await callGemini(text, taskType);
+            const loaderEl = document.getElementById(loaderId);
+            if (loaderEl) loaderEl.remove();
+
+            chat.innerHTML += `
+                <div class="flex gap-3 message-anim">
+                    <div class="w-8 h-8 bg-saudi-gold rounded-full flex items-center justify-center shrink-0 shadow-sm border border-saudi-gold/20"><i data-lucide="cpu" class="w-4 h-4 text-saudi-green"></i></div>
+                    <div class="ai-message-bot p-5 rounded-2xl shadow-sm text-xs max-w-[85%] leading-relaxed text-slate-700">${replyText.replace(/\n/g, '<br>')}</div>
+                </div>
+            `;
+            chat.scrollTop = chat.scrollHeight;
+            lucide.createIcons();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
